@@ -1,0 +1,24 @@
+{
+  "name": "Go + React Dev Container",
+  "image": "dev-go-node:0.0.1",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "go.useLanguageServer": true
+      },
+      "extensions": [
+        "golang.go",
+        "dbaeumer.vscode-eslint",
+        "hashicorp.terraform"
+      ]
+    }
+  },
+  "mounts": [
+    {
+      "source": "/var/run/docker.sock",
+      "target": "/var/run/docker.sock",
+      "type": "bind"
+    }
+  ],
+  "remoteUser": "vscode"
+}
