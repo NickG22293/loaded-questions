@@ -26,5 +26,7 @@ COPY --from=builder /app/main .
 # Expose the port the app runs on
 EXPOSE 8080
 
+RUN ls -la /root/
+
 # Run the application
-CMD ["./main"]
+CMD ["/root/main"]

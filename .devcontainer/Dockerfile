@@ -28,5 +28,5 @@ RUN curl -fsSL -o /usr/local/bin/kubectl https://dl.k8s.io/release/v1.27.0/bin/l
 # Install Docker CLI
 RUN apt-get update && apt-get install -y docker.io
 
-# Set default user
-USER vscode
+# Set default user (root for docker sock permissions)
+USER root
