@@ -79,10 +79,27 @@ func getSessions(c *gin.Context) {
 	c.JSON(http.StatusFound, jsonData)
 }
 
+func getSession(c *gin.Context) {
+	sessionID := c.Param("sessionID")
+
+	sessionsMu.Lock()
+	session, exists := sessions[sessionID]
+	sessionsMu.Unlock()
+
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, session)
+}
+
+
 func main() {
 	r := gin.Default()
 	r.POST("/session", createSession)
 	r.POST("/session/:sessionID/join", joinSession)
 	r.GET("/sessions", getSessions)
+	r.GET("/session/:sessionID", getSession)
 	r.Run(":8080")
 }
