@@ -15,7 +15,7 @@ function JoinGame() {
 
     if (response.ok) {
       const data = await response.json();
-      navigate(`/session/${sessionID}/game`, { state: { playerID: data.player_id } });
+      navigate(`/session/${sessionID}/lobby`, { state: { playerID: data.player_id } });
     } else {
       alert("Failed to join session.");
     }
