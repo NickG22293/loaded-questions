@@ -40,7 +40,7 @@ function GamePage() {
   };
 
   return (
-    <div>
+    <div className="page-container">
       <h1>Loaded Questions - Game Round</h1>
 
       {gameState ? (
@@ -54,13 +54,14 @@ function GamePage() {
                 placeholder="Enter your answer..."
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
+                className="input"
               />
-              <button onClick={submitAnswer}>Submit Answer</button>
+              <button className="btn-primary" onClick={submitAnswer}>Submit Answer</button>
             </div>
           )}
 
           {isAsker && !gameState.question && (
-            <button onClick={() => navigate(`/session/${sessionID}/ask`)}>Ask a Question</button>
+            <button className="btn-primary" onClick={() => navigate(`/session/${sessionID}/ask`)}>Ask a Question</button>
           )}
         </>
       ) : (

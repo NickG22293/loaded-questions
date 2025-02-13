@@ -22,7 +22,7 @@ function JoinGame() {
   };
 
   return (
-    <div>
+    <div className="page-container">
       <h1>Join Game</h1>
       <p>Game Code: {sessionID}</p>
       <input
@@ -30,8 +30,9 @@ function JoinGame() {
         placeholder="Enter your name"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        className="input"
       />
-      <button onClick={joinSession}>Join</button>
+      <button className="btn-primary" onClick={joinSession}>Join</button>
     </div>
   );
 }

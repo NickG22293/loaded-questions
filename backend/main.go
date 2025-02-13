@@ -204,8 +204,6 @@ func main() {
 
 	r.POST("/session", createSession)
 	r.POST("/session/:sessionID/join", joinSession)
-	// start is probably unnecessary on the backend 
-	// r.POST("/session/:sessionID/start", startGame)
 	r.GET("/sessions", getSessions)
 	r.GET("/session/:sessionID", getSession)
 	r.POST("/session/:sessionID/question", setQuestion)

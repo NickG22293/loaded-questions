@@ -66,3 +66,43 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === Reusable Styles === */
+.btn-primary {
+  @apply px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded;
+}
+
+.card {
+  @apply bg-white text-black p-6 rounded-lg shadow-lg w-96 text-center;
+}
+
+.page-container {
+  @apply min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-700 to-blue-500 text-white;
+}
+
+@layer base {
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  h2 {
+    @apply text-2xl font-semibold;
+  }
+  p {
+    @apply text-lg;
+  }
+  ul {
+    @apply list-disc list-inside;
+  }
+  button {
+    @apply px-4 py-2 font-medium rounded transition-all;
+  }
+}

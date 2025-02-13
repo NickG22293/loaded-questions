@@ -21,9 +21,9 @@ function App() {
   };
 
   return (
-    <div>
+    <div className="page-container">
       <h1>Welcome to Loaded Questions</h1>
-      <button onClick={startSession}>Start Session</button>
+      <button className="btn-primary" onClick={startSession}>Start Session</button>
     </div>
   );
 }

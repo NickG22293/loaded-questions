@@ -45,12 +45,12 @@ function GameLobby() {
   };
 
   return (
-    <div>
+    <div className="page-container">
       <h1>Game Lobby</h1>
       <p>Session ID: {sessionID}</p>
       
       <h2>Players Joined:</h2>
-      <ul>
+      <ul className="list-disc list-inside">
         {players.map((player) => (
           <li key={player.id}>{player.name}</li>
         ))}
@@ -58,12 +58,12 @@ function GameLobby() {
 
       {/* Show "Join as Player" button only if user hasn't joined */}
       {!playerID && (
-        <button onClick={() => navigate(`/session/${sessionID}`)}>Join as Player</button>
+        <button className="btn-secondary" onClick={() => navigate(`/session/${sessionID}`)}>Join as Player</button>
       )}
 
       {/* Show "Start Game" button only if at least 3 players have joined */}
       {players.length >= 3 && (
-        <button onClick={startGame}>Start Game</button>
+        <button className="btn-primary" onClick={startGame}>Start Game</button>
       )}
     </div>
   );
