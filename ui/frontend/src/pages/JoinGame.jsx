@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import Banner from "../components/Banner";
 
 function JoinGame() {
   const { sessionID } = useParams();
@@ -23,6 +24,7 @@ function JoinGame() {
 
   return (
     <div className="page-container">
+      <Banner userName={name} />
       <h1>Join Game</h1>
       <p>Game Code: {sessionID}</p>
       <input

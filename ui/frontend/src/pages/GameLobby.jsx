@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import Banner from "../components/Banner";
 
 function GameLobby() {
   const { sessionID } = useParams();

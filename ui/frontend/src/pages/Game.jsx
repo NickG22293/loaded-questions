@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import Banner from "../components/Banner";
+import PlayerList from "../components/PlayerList";
 
 function GamePage() {
   const { sessionID } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const playerID = location.state?.playerID || null;
   const [gameState, setGameState] = useState(null);
   const [answer, setAnswer] = useState("");
+  const [question, setQuestion] = useState("");
   const [isAsker, setIsAsker] = useState(false);
+  const playerID = localStorage.getItem("playerID");
 
   useEffect(() => {
     const fetchGameState = async () => {
@@ -39,34 +40,63 @@ function GamePage() {
     }
   };
 
+  const submitQuestion = async () => {
+    const response = await fetch(`http://localhost:8080/session/${sessionID}/question`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_id: playerID, question }),
+    });
+
+    if (response.ok) {
+      setQuestion(""); // Clear the input field after submitting
+    } else {
+      alert("Failed to submit question.");
+    }
+  };
+
   return (
-    <div className="page-container">
-      <h1>Loaded Questions - Game Round</h1>
+    <div className="page-container flex">
+      <div className="player-list-container flex flex-col justify-center items-center w-1/4">
+        {gameState && <PlayerList sessionID={sessionID} players={gameState.players} />}
+      </div>
+      <div className="game-ui-container flex flex-col justify-center items-center w-3/4">
+        <Banner userName={gameState?.players[playerID]?.name} />
+        <h1>Loaded Questions - Game Round</h1>
 
-      {gameState ? (
-        <>
-          <p><strong>Current Question:</strong> {gameState.question || "Waiting for the Asker..."}</p>
+        {gameState ? (
+          <>
+            <p><strong>Current Question:</strong> {gameState.question || "Waiting for the Asker..."}</p>
 
-          {!isAsker && gameState.question && !gameState.answers[playerID] && (
-            <div>
-              <input
-                type="text"
-                placeholder="Enter your answer..."
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                className="input"
-              />
-              <button className="btn-primary" onClick={submitAnswer}>Submit Answer</button>
-            </div>
-          )}
+            {!isAsker && gameState.question && !gameState.answers[playerID] && (
+              <div>
+                <input
+                  type="text"
+                  placeholder="Enter your answer..."
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  className="input"
+                />
+                <button className="btn-primary" onClick={submitAnswer}>Submit Answer</button>
+              </div>
+            )}
 
-          {isAsker && !gameState.question && (
-            <button className="btn-primary" onClick={() => navigate(`/session/${sessionID}/ask`)}>Ask a Question</button>
-          )}
-        </>
-      ) : (
-        <p>Loading game state...</p>
-      )}
+            {isAsker && !gameState.question && (
+              <div>
+                <input
+                  type="text"
+                  placeholder="Enter your question..."
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  className="input"
+                />
+                <button className="btn-primary" onClick={submitQuestion}>Submit Question</button>
+              </div>
+            )}
+          </>
+        ) : (
+          <p>Loading game state...</p>
+        )}
+      </div>
     </div>
   );
 }
