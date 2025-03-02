@@ -12,10 +12,13 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 # Use a smaller base image for the final container
 FROM alpine:latest
+
+# Install necessary dependencies
+RUN apk add --no-cache ca-certificates
 
 # Set the working directory
 WORKDIR /root/

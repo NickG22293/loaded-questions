@@ -3,16 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"github.com/gin-contrib/cors"
-	"fmt"
 	"testing"
 	"time"
-)	
-	
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+)
+
 func TestCreateSession(t *testing.T) {
 	router := setupRouter()
 
@@ -158,7 +159,7 @@ func TestStartGame(t *testing.T) {
 	// Join the session with 3 players
 	for i := 1; i <= 3; i++ {
 		w = httptest.NewRecorder()
-		req, _ = http.NewRequest("POST", fmt.Sprintf("/session/%s/join?name=Player%d",sessionID,i), nil)
+		req, _ = http.NewRequest("POST", fmt.Sprintf("/session/%s/join?name=Player%d", sessionID, i), nil)
 		router.ServeHTTP(w, req)
 	}
 
@@ -172,6 +173,44 @@ func TestStartGame(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &startResponse)
 	assert.NoError(t, err)
 	assert.Equal(t, "Game started!", startResponse["message"])
+}
+
+func TestAskerSelectedOnGameStart(t *testing.T) {
+	router := setupRouter()
+
+	// First, create a session
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/session", nil)
+	router.ServeHTTP(w, req)
+	var response map[string]string
+	json.Unmarshal(w.Body.Bytes(), &response)
+	sessionID := response["session_id"]
+
+	// Join the session with 3 players
+	for i := 1; i <= 3; i++ {
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest("POST", fmt.Sprintf("/session/%s/join?name=Player%d", sessionID, i), nil)
+		router.ServeHTTP(w, req)
+	}
+
+	// Start the game
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/session/"+sessionID+"/start", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Get the session to check if an Asker has been selected
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/session/"+sessionID, nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var session GameSession
+	err := json.Unmarshal(w.Body.Bytes(), &session)
+	assert.NoError(t, err)
+	assert.NotNil(t, session.Asker)
+	assert.NotEmpty(t, session.Asker.ID)
 }
 
 func setupRouter() *gin.Engine {

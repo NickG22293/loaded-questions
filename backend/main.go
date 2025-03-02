@@ -1,14 +1,16 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/cors"
-	"github.com/google/uuid"
+	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"sync"
-	"math/rand"
 	"time"
-	"encoding/json"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Player struct {
@@ -17,15 +19,15 @@ type Player struct {
 }
 
 type GameSession struct {
-	ID        string            `json:"id"`
-	Asker     *Player           `json:"asker"`
-	Players   map[string]Player `json:"players"`
-	Question  string            `json:"question"`
-	Answers   map[string]string `json:"answers"`
-	Guesses   map[string]string `json:"guesses"`
-	Score     map[string]int    `json:"score"`
-	Started   bool              `json:"started"`
-	mu        sync.Mutex
+	ID       string            `json:"id"`
+	Asker    *Player           `json:"asker"`
+	Players  map[string]Player `json:"players"`
+	Question string            `json:"question"`
+	Answers  map[string]string `json:"answers"`
+	Guesses  map[string]string `json:"guesses"`
+	Score    map[string]int    `json:"score"`
+	Started  bool              `json:"started"`
+	mu       sync.Mutex
 }
 
 var sessions = make(map[string]*GameSession)
@@ -63,20 +65,23 @@ func startGame(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "At least 3 players required to start"})
 		return
 	}
-
-	// Randomly select one player to be the Asker
-	rand.Seed(time.Now().UnixNano())
-    playerIDs := make([]string, 0, len(session.Players))
-    for playerID := range session.Players {
-        playerIDs = append(playerIDs, playerID)
-    }
-    randomIndex := rand.Intn(len(session.Players))
-	asker := session.Players[playerIDs[randomIndex]] 
-    session.Asker = &asker
+	assignAsker(session)
 
 	session.Started = true
 
 	c.JSON(http.StatusOK, gin.H{"message": "Game started!"})
+}
+
+func assignAsker(session *GameSession) {
+	rand.Seed(time.Now().UnixNano())
+	playerIDs := make([]string, 0, len(session.Players))
+	for playerID := range session.Players {
+		playerIDs = append(playerIDs, playerID)
+	}
+	randomIndex := rand.Intn(len(session.Players))
+	asker := session.Players[playerIDs[randomIndex]]
+	session.Asker = &asker
+	fmt.Printf("Asker: %s, Session ID: %s\n", asker.Name, session.ID)
 }
 
 func joinSession(c *gin.Context) {
