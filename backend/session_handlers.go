@@ -31,6 +31,7 @@ func createSession(c *gin.Context) {
         Answers: make(map[PlayerID]string),
         Guesses: make(map[PlayerID]string),
         Score:   make(map[PlayerID]int),
+		Status:  Lobby,
     }
     sessionsMu.Unlock()
     c.JSON(http.StatusOK, gin.H{"session_id": sessionID})
@@ -56,7 +57,7 @@ func startGame(c *gin.Context) {
     }
     assignAsker(session)
 
-    session.Started = true
+    session.Status = Asking
 
     c.JSON(http.StatusOK, gin.H{"message": "Game started!"})
 }

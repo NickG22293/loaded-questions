@@ -59,6 +59,7 @@ func setQuestion(c *gin.Context) {
 
 	session.mu.Lock()
 	session.Question = requestBody.Question
+	session.Status = Answering
 	session.mu.Unlock()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Question set!"})
