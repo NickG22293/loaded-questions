@@ -1,4 +1,4 @@
-package main
+package main 
 
 import (
 	"bytes"
@@ -213,6 +213,52 @@ func TestAskerSelectedOnGameStart(t *testing.T) {
 	assert.NotEmpty(t, session.Asker.ID)
 }
 
+func TestGetAnswers(t *testing.T) {
+	router := setupRouter()
+
+	// First, create a session
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/session", nil)
+	router.ServeHTTP(w, req)
+	var response map[string]string
+	json.Unmarshal(w.Body.Bytes(), &response)
+	sessionID := response["session_id"]
+
+	// Join the session with 3 players
+	for i := 1; i <= 3; i++ {
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest("POST", fmt.Sprintf("/session/%s/join?name=Player%d", sessionID, i), nil)
+		router.ServeHTTP(w, req)
+	}
+
+	// Start the game
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("POST", "/session/"+sessionID+"/start", nil)
+	router.ServeHTTP(w, req)
+
+	// Submit answers
+	for i := 1; i <= 3; i++ {
+		w = httptest.NewRecorder()
+		answer := map[string]string{"player_id": fmt.Sprintf("Player%d", i), "answer": "Blue"}
+		jsonValue, _ := json.Marshal(answer)
+		req, _ = http.NewRequest("POST", "/session/"+sessionID+"/answer", bytes.NewBuffer(jsonValue))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+	}
+
+	// Get answers
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/session/"+sessionID+"/answers", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var answers map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &answers)
+	fmt.Printf("Answers: %v\n", answers)
+	assert.NoError(t, err)
+	assert.Len(t, answers, 3)
+}
+
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
@@ -234,6 +280,7 @@ func setupRouter() *gin.Engine {
 	r.POST("/session/:sessionID/question", setQuestion)
 	r.POST("/session/:sessionID/answer", submitAnswer)
 	r.POST("/session/:sessionID/start", startGame)
+	r.GET("/session/:sessionID/answers", getAnswers)
 
 	return r
 }
