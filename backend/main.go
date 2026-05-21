@@ -1,32 +1,96 @@
 package main
 
 import (
-    "time"
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-    "github.com/gin-contrib/cors"
-    "github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"loaded-questions/handlers"
+	authmiddleware "loaded-questions/middleware"
+	"loaded-questions/store"
 )
 
 func main() {
-    r := gin.Default()
+	s := store.NewMemoryStore()
+	h := handlers.New(s)
 
-    // Enable CORS
-    r.Use(cors.New(cors.Config{
-        AllowOrigins:     []string{"http://127.0.0.1:5173"}, // Allow frontend origin
-        AllowMethods:     []string{"GET", "POST", "OPTIONS"},
-        AllowHeaders:     []string{"Content-Type"},
-        ExposeHeaders:    []string{"Content-Length"},
-        AllowCredentials: true,
-        MaxAge:           12 * time.Hour,
-    }))
+	r := chi.NewRouter()
+	r.Use(chimiddleware.Logger)
+	r.Use(chimiddleware.Recoverer)
+	r.Use(corsMiddleware)
 
-    r.POST("/session", createSession)
-    r.POST("/session/:sessionID/join", joinSession)
-    r.GET("/sessions", getSessions)
-    r.GET("/session/:sessionID", getSession)
-    r.POST("/session/:sessionID/question", setQuestion)
-    r.POST("/session/:sessionID/answer", submitAnswer)
-    r.POST("/session/:sessionID/start", startGame)
-	r.GET("/session/:sessionID/answers", getAnswers)
-    r.Run(":8080")
+	r.Route("/api", func(r chi.Router) {
+		// Public endpoints — no auth cookie required.
+		r.Post("/lobbies", h.CreateLobby)
+		r.Post("/lobbies/{id}/join", h.JoinLobby)
+		r.Get("/lobbies/{id}", h.GetLobby)
+		r.Get("/lobbies/{id}/events", h.StreamEvents)
+
+		// Authenticated endpoints.
+		r.Group(func(r chi.Router) {
+			r.Use(authmiddleware.Auth(s))
+			r.Post("/lobbies/{id}/start", h.StartGame)
+			r.Post("/games/{id}/question", h.SubmitQuestion)
+			r.Post("/games/{id}/answer", h.SubmitAnswer)
+			r.Post("/games/{id}/assign", h.AssignAnswer)
+			r.Post("/games/{id}/lock", h.LockAssignments)
+			r.Post("/games/{id}/next", h.NextRound)
+		})
+	})
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 0, // SSE streams need no write timeout
+		IdleTimeout:  60 * time.Second,
+	}
+
+	go func() {
+		log.Printf("server listening on :%s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("graceful shutdown failed: %v", err)
+	}
+	log.Println("server stopped")
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			origin = "*"
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
