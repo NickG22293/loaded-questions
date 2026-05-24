@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "loaded-questions.fullname" . }}-nginx
+  labels:
+    {{- include "loaded-questions.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+data:
+  # Replaces the nginx.conf baked into the image.
+  # In Kubernetes, /api routing is handled by the Ingress — nginx only needs
+  # to serve static files and provide the SPA fallback to index.html.
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location /healthz {
+            access_log off;
+            return 200 "ok\n";
+            add_header Content-Type text/plain;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }

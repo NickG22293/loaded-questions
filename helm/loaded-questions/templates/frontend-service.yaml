@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "loaded-questions.fullname" . }}-frontend
+  labels:
+    {{- include "loaded-questions.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "loaded-questions.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend

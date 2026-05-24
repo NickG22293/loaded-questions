@@ -1,0 +1,42 @@
+backend:
+  image:
+    repository: loaded-questions/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 8080
+  resources: {}
+  # resources:
+  #   requests:
+  #     cpu: 50m
+  #     memory: 32Mi
+  #   limits:
+  #     cpu: 200m
+  #     memory: 128Mi
+
+frontend:
+  image:
+    repository: loaded-questions/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 80
+  resources: {}
+
+ingress:
+  # ingressClassName should match your ingress controller (nginx, traefik, etc.)
+  className: nginx
+  host: questions.local
+  tls:
+    enabled: false
+    # If enabled, reference an existing TLS Secret (e.g. managed by cert-manager).
+    secretName: loaded-questions-tls
+
+# Optional: pull images from a private registry
+# imagePullSecrets:
+#   - name: homelab-registry
+
+# Namespace-wide annotations applied to all resources (e.g. for Rancher projects)
+commonAnnotations: {}

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: loaded-questions
+description: Real-time multiplayer Loaded Questions party game
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
