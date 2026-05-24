@@ -1,4 +1,4 @@
-export type Phase = 'ASKING' | 'ANSWERING' | 'ASSIGNING' | 'SCORING'
+export type Phase = 'ASKING' | 'ANSWERING' | 'ASSIGNING' | 'SCORING' | 'GAME_OVER'
 
 export interface Player {
   id: string
@@ -30,6 +30,7 @@ export interface Round {
   question?: string
   answers?: Answer[]
   phase: Phase
+  phaseStartedAt?: string
 }
 
 export interface Game {
@@ -39,7 +40,14 @@ export interface Game {
   currentRound: Round | null
   rounds: Round[]
   targetScore: number
+  answerTimerSecs: number
   winnerId?: string
+}
+
+export interface AnswerCountEvent {
+  submitted: number
+  total: number
+  submittedPlayerIds: string[]
 }
 
 // SSE event shapes

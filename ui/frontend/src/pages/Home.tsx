@@ -28,7 +28,9 @@ export function Home() {
     setCreating(true)
     setCreateError('')
     try {
-      const { lobbyId } = await createLobby(createName, targetScore, timerSecs)
+      const { lobbyId, playerId, token } = await createLobby(createName, targetScore, timerSecs)
+      sessionStorage.setItem(`playerId:${lobbyId}`, playerId)
+      sessionStorage.setItem(`token:${lobbyId}`, token)
       navigate(`/lobby/${lobbyId}`)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create lobby')
@@ -42,8 +44,11 @@ export function Home() {
     setJoining(true)
     setJoinError('')
     try {
-      await joinLobby(lobbyCode.toUpperCase(), joinName)
-      navigate(`/lobby/${lobbyCode.toUpperCase()}`)
+      const { playerId, token } = await joinLobby(lobbyCode.toUpperCase(), joinName)
+      const code = lobbyCode.toUpperCase()
+      sessionStorage.setItem(`playerId:${code}`, playerId)
+      sessionStorage.setItem(`token:${code}`, token)
+      navigate(`/lobby/${code}`)
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : 'Failed to join lobby')
     } finally {

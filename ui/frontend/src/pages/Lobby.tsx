@@ -37,20 +37,19 @@ export function Lobby() {
       )
     })
 
-    es.addEventListener('game_started', (e: MessageEvent) => {
-      const updated = JSON.parse(e.data) as LobbyType
-      setLobby(updated)
+    es.addEventListener('game_started', () => {
+      navigate(`/game/${id}`)
     })
 
     return () => es.close()
   }, [id])
 
-  // Redirect once game starts
+  // Redirect if game already started (e.g. user refreshed lobby page mid-game).
   useEffect(() => {
-    if (lobby?.gameStarted && lobby.gameId) {
-      navigate(`/game/${lobby.gameId}`)
+    if (lobby?.gameStarted) {
+      navigate(`/game/${id}`)
     }
-  }, [lobby, navigate])
+  }, [lobby, navigate, id])
 
   async function handleStart() {
     if (!id) return

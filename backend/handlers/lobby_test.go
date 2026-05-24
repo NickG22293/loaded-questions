@@ -284,8 +284,10 @@ func TestStartGame_HappyPath(t *testing.T) {
 	const creatorID = "creator1"
 	lobby := twoPlayerLobby(creatorID)
 	var broadcasted []byte
+	var createdGame *models.Game
 	s := &mockStore{
 		getLobbyFn:         func(string) (*models.Lobby, error) { return lobby, nil },
+		createGameFn:       func(g *models.Game) error { createdGame = g; return nil },
 		updateLobbyFn:      func(*models.Lobby) error { return nil },
 		broadcastToLobbyFn: func(_ string, event []byte) { broadcasted = event },
 	}
@@ -298,6 +300,12 @@ func TestStartGame_HappyPath(t *testing.T) {
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 	assert.True(t, lobby.GameStarted)
+	assert.NotEmpty(t, lobby.GameID)
+
+	require.NotNil(t, createdGame)
+	assert.Equal(t, creatorID, createdGame.CurrentRound.AskerID)
+	assert.Equal(t, models.PhaseAsking, createdGame.CurrentRound.Phase)
+	assert.Equal(t, 1, createdGame.CurrentRound.RoundNumber)
 	assert.Contains(t, string(broadcasted), "game_started")
 }
 

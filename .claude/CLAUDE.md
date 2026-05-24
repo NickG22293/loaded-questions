@@ -58,3 +58,7 @@ The backend will be implemented in Go. We should leverage as much as we can - do
 # Process 
 
 Development and testing will move in stages. First serve the UI and server locally and poke about on localhost for rapid iteration, then a Dockerfile that hosts the UI via vite or an nginx server and the backend running in a simple Go binary, and then eventually in the Kubernetes cluster deployed via helm chart. 
+
+# Docs 
+
+The docs/ folder will hold additional specs that should be referenced for specific implementation details as needed. 

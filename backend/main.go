@@ -31,16 +31,18 @@ func main() {
 		r.Post("/lobbies/{id}/join", h.JoinLobby)
 		r.Get("/lobbies/{id}", h.GetLobby)
 		r.Get("/lobbies/{id}/events", h.StreamEvents)
+		r.Get("/lobbies/{id}/game", h.GetGame)
 
-		// Authenticated endpoints.
+		// Authenticated endpoints — all game actions use the lobby ID so
+		// clients don't need to track a separate game ID.
 		r.Group(func(r chi.Router) {
 			r.Use(authmiddleware.Auth(s))
 			r.Post("/lobbies/{id}/start", h.StartGame)
-			r.Post("/games/{id}/question", h.SubmitQuestion)
-			r.Post("/games/{id}/answer", h.SubmitAnswer)
-			r.Post("/games/{id}/assign", h.AssignAnswer)
-			r.Post("/games/{id}/lock", h.LockAssignments)
-			r.Post("/games/{id}/next", h.NextRound)
+			r.Post("/lobbies/{id}/question", h.SubmitQuestion)
+			r.Post("/lobbies/{id}/answer", h.SubmitAnswer)
+			r.Post("/lobbies/{id}/assign", h.AssignAnswer)
+			r.Post("/lobbies/{id}/lock", h.LockAssignments)
+			r.Post("/lobbies/{id}/next", h.NextRound)
 		})
 	})
 
@@ -85,7 +87,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Player-Token")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

@@ -19,6 +19,7 @@ type createLobbyRequest struct {
 type createLobbyResponse struct {
 	LobbyID  string `json:"lobbyId"`
 	PlayerID string `json:"playerId"`
+	Token    string `json:"token"`
 }
 
 func (h *Handler) CreateLobby(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +66,7 @@ func (h *Handler) CreateLobby(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setTokenCookie(w, token)
-	writeJSON(w, http.StatusCreated, createLobbyResponse{LobbyID: lobbyID, PlayerID: playerID})
+	writeJSON(w, http.StatusCreated, createLobbyResponse{LobbyID: lobbyID, PlayerID: playerID, Token: token})
 }
 
 type joinLobbyRequest struct {
@@ -74,6 +75,7 @@ type joinLobbyRequest struct {
 
 type joinLobbyResponse struct {
 	PlayerID string `json:"playerId"`
+	Token    string `json:"token"`
 }
 
 func (h *Handler) JoinLobby(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +130,7 @@ func (h *Handler) JoinLobby(w http.ResponseWriter, r *http.Request) {
 
 	setTokenCookie(w, token)
 	h.store.BroadcastToLobby(lobbyID, sseEvent("player_joined", player))
-	writeJSON(w, http.StatusOK, joinLobbyResponse{PlayerID: playerID})
+	writeJSON(w, http.StatusOK, joinLobbyResponse{PlayerID: playerID, Token: token})
 }
 
 func (h *Handler) GetLobby(w http.ResponseWriter, r *http.Request) {
@@ -163,13 +165,36 @@ func (h *Handler) StartGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gamePlayers := make([]*models.Player, len(lobby.Players))
+	copy(gamePlayers, lobby.Players)
+
+	gameID := generateToken()[:12]
+	game := &models.Game{
+		ID:              gameID,
+		LobbyID:         lobbyID,
+		Players:         gamePlayers,
+		TargetScore:     lobby.TargetScore,
+		AnswerTimerSecs: lobby.AnswerTimerSecs,
+		Rounds:          []*models.Round{},
+		CurrentRound: &models.Round{
+			RoundNumber: 1,
+			AskerID:     lobby.Players[0].ID,
+			Phase:       models.PhaseAsking,
+		},
+	}
+	if err := h.store.CreateGame(game); err != nil {
+		http.Error(w, "failed to create game", http.StatusInternalServerError)
+		return
+	}
+
 	lobby.GameStarted = true
+	lobby.GameID = gameID
 	if err := h.store.UpdateLobby(lobby); err != nil {
 		http.Error(w, "failed to start game", http.StatusInternalServerError)
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("game_started", lobby))
+	h.store.BroadcastToLobby(lobbyID, sseEvent("game_started", game))
 	w.WriteHeader(http.StatusNoContent)
 }
 

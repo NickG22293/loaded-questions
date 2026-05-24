@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"net/http"
 
+	"loaded-questions/models"
 	"loaded-questions/store"
 )
 
@@ -46,4 +47,17 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+// getGameForLobby resolves the active game for a lobby in two store lookups.
+// Returns a descriptive error if the lobby doesn't exist or has no game yet.
+func (h *Handler) getGameForLobby(lobbyID string) (*models.Game, error) {
+	lobby, err := h.store.GetLobby(lobbyID)
+	if err != nil {
+		return nil, fmt.Errorf("lobby not found")
+	}
+	if !lobby.GameStarted || lobby.GameID == "" {
+		return nil, fmt.Errorf("game not started")
+	}
+	return h.store.GetGame(lobby.GameID)
 }
