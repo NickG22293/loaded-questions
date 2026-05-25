@@ -104,6 +104,57 @@ docker run -p 3000:80 loaded-questions-frontend
 
 ---
 
+## Helm chart
+
+The chart lives at `helm/loaded-questions/` and targets any nginx-ingress Kubernetes cluster.
+
+### Push to GHCR (OCI registry)
+
+Helm 3.8+ supports OCI registries natively — no plugin needed.
+
+```bash
+# 1. Authenticate (once per machine; uses a GitHub PAT with write:packages scope)
+echo $GITHUB_TOKEN | helm registry login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+
+# 2. Package the chart
+helm package helm/loaded-questions
+# Produces: loaded-questions-0.1.0.tgz
+
+# 3. Push to GHCR
+helm push loaded-questions-0.1.0.tgz oci://ghcr.io/YOUR_GITHUB_USERNAME/helm
+```
+
+The chart is now available at `oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/loaded-questions`.
+
+> **GHCR visibility** — new packages default to private. Go to your GitHub profile →
+> **Packages** → `helm/loaded-questions` → **Package settings** → make it public if
+> you want others to pull it without authenticating.
+
+### Install from GHCR
+
+```bash
+helm install loaded-questions \
+  oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/loaded-questions \
+  --version 0.1.0 \
+  --set ingress.host=questions.yourdomain.com \
+  --set backend.image.repository=ghcr.io/YOUR_GITHUB_USERNAME/loaded-questions-backend \
+  --set backend.image.tag=latest \
+  --set frontend.image.repository=ghcr.io/YOUR_GITHUB_USERNAME/loaded-questions-frontend \
+  --set frontend.image.tag=latest
+```
+
+### Upgrade
+
+Bump `version` in `helm/loaded-questions/Chart.yaml`, then:
+
+```bash
+helm package helm/loaded-questions
+helm push loaded-questions-<NEW_VERSION>.tgz oci://ghcr.io/YOUR_GITHUB_USERNAME/helm
+helm upgrade loaded-questions oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/loaded-questions --version <NEW_VERSION>
+```
+
+---
+
 ## Running both services together
 
 ```bash
