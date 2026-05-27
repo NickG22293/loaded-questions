@@ -1,34 +1,33 @@
-package store
+package sessions
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"loaded-questions/models"
 )
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
-func testLobby(id string) *models.Lobby {
-	return &models.Lobby{
+func testLobby(id string) *Lobby {
+	return &Lobby{
 		ID:              id,
-		Players:         []*models.Player{{ID: "p1", Name: "Alice", IsCreator: true}},
+		Players:         []*Player{{ID: "p1", Name: "Alice", IsCreator: true}},
 		CreatorID:       "p1",
 		TargetScore:     10,
 		AnswerTimerSecs: 60,
 	}
 }
 
-func testGame(id, lobbyID string) *models.Game {
-	return &models.Game{
+func testGame(id, lobbyID string) *Game {
+	return &Game{
 		ID:      id,
 		LobbyID: lobbyID,
-		Players: []*models.Player{{ID: "p1", Name: "Alice"}},
-		CurrentRound: &models.Round{
+		Players: []*Player{{ID: "p1", Name: "Alice"}},
+		CurrentRound: &Round{
 			RoundNumber: 1,
 			AskerID:     "p1",
-			Phase:       models.PhaseAsking,
+			Phase:       PhaseAsking,
 		},
 		TargetScore: 10,
 	}
@@ -65,7 +64,7 @@ func TestMemoryStore_GetLobby_NotFound(t *testing.T) {
 
 func TestMemoryStore_UpdateLobby_NotFound(t *testing.T) {
 	s := NewMemoryStore()
-	err := s.UpdateLobby(&models.Lobby{ID: "NOPE00"})
+	err := s.UpdateLobby(&Lobby{ID: "NOPE00"})
 	assert.Error(t, err)
 }
 
@@ -96,7 +95,7 @@ func TestMemoryStore_GetGame_NotFound(t *testing.T) {
 
 func TestMemoryStore_UpdateGame_NotFound(t *testing.T) {
 	s := NewMemoryStore()
-	err := s.UpdateGame(&models.Game{ID: "nope"})
+	err := s.UpdateGame(&Game{ID: "nope"})
 	assert.Error(t, err)
 }
 
@@ -149,7 +148,6 @@ func TestMemoryStore_SSEBroadcastDropsWhenFull(t *testing.T) {
 	ch <- []byte("already here")
 	s.RegisterSSEClient("lobby1", ch)
 
-	// Must not block.
 	s.BroadcastToLobby("lobby1", []byte("dropped"))
 
 	assert.Len(t, ch, 1)
@@ -158,7 +156,6 @@ func TestMemoryStore_SSEBroadcastDropsWhenFull(t *testing.T) {
 
 func TestMemoryStore_SSEBroadcastToUnknownLobby(t *testing.T) {
 	s := NewMemoryStore()
-	// Should not panic when no clients are registered for the lobby.
 	assert.NotPanics(t, func() {
 		s.BroadcastToLobby("ghost", []byte("event: x\ndata: {}\n\n"))
 	})

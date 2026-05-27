@@ -4,7 +4,7 @@ import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { createLobby, joinLobby } from '@/api/client'
+import { createLobby, joinLobby } from '@/api/sessions'
 
 export function Home() {
   const navigate = useNavigate()
@@ -31,7 +31,7 @@ export function Home() {
       const { lobbyId, playerId, token } = await createLobby(createName, targetScore, timerSecs)
       sessionStorage.setItem(`playerId:${lobbyId}`, playerId)
       sessionStorage.setItem(`token:${lobbyId}`, token)
-      navigate(`/lobby/${lobbyId}`)
+      navigate(`/sessions/lobby/${lobbyId}`)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create lobby')
     } finally {
@@ -48,7 +48,7 @@ export function Home() {
       const code = lobbyCode.toUpperCase()
       sessionStorage.setItem(`playerId:${code}`, playerId)
       sessionStorage.setItem(`token:${code}`, token)
-      navigate(`/lobby/${code}`)
+      navigate(`/sessions/lobby/${code}`)
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : 'Failed to join lobby')
     } finally {
@@ -164,8 +164,8 @@ export function Home() {
     <Layout>
       <div className="max-w-md mx-auto text-center space-y-8 py-16">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Loaded Questions</h1>
-          <p className="text-muted-foreground">A party game about how well you know each other.</p>
+          <h1 className="text-4xl font-bold mb-2">Quick Session</h1>
+          <p className="text-muted-foreground">Jump into a real-time game with friends.</p>
         </div>
         <div className="flex flex-col gap-4">
           <Button size="lg" onClick={() => setView('create')}>

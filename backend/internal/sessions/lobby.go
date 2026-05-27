@@ -1,4 +1,4 @@
-package handlers
+package sessions
 
 import (
 	"encoding/json"
@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/middleware"
-	"loaded-questions/models"
+	"loaded-questions/internal/httputil"
 )
 
 type createLobbyRequest struct {
@@ -43,14 +42,14 @@ func (h *Handler) CreateLobby(w http.ResponseWriter, r *http.Request) {
 	lobbyID := generateLobbyID()
 	token := generateToken()
 
-	player := &models.Player{
+	player := &Player{
 		ID:        playerID,
 		Name:      req.PlayerName,
 		IsCreator: true,
 	}
-	lobby := &models.Lobby{
+	lobby := &Lobby{
 		ID:              lobbyID,
-		Players:         []*models.Player{player},
+		Players:         []*Player{player},
 		CreatorID:       playerID,
 		TargetScore:     req.TargetScore,
 		AnswerTimerSecs: req.AnswerTimerSecs,
@@ -66,7 +65,7 @@ func (h *Handler) CreateLobby(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setTokenCookie(w, token)
-	writeJSON(w, http.StatusCreated, createLobbyResponse{LobbyID: lobbyID, PlayerID: playerID, Token: token})
+	httputil.WriteJSON(w, http.StatusCreated, createLobbyResponse{LobbyID: lobbyID, PlayerID: playerID, Token: token})
 }
 
 type joinLobbyRequest struct {
@@ -113,7 +112,7 @@ func (h *Handler) JoinLobby(w http.ResponseWriter, r *http.Request) {
 
 	playerID := generateToken()[:8]
 	token := generateToken()
-	player := &models.Player{
+	player := &Player{
 		ID:   playerID,
 		Name: req.PlayerName,
 	}
@@ -129,8 +128,8 @@ func (h *Handler) JoinLobby(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setTokenCookie(w, token)
-	h.store.BroadcastToLobby(lobbyID, sseEvent("player_joined", player))
-	writeJSON(w, http.StatusOK, joinLobbyResponse{PlayerID: playerID, Token: token})
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("player_joined", player))
+	httputil.WriteJSON(w, http.StatusOK, joinLobbyResponse{PlayerID: playerID, Token: token})
 }
 
 func (h *Handler) GetLobby(w http.ResponseWriter, r *http.Request) {
@@ -140,12 +139,12 @@ func (h *Handler) GetLobby(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "lobby not found", http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, lobby)
+	httputil.WriteJSON(w, http.StatusOK, lobby)
 }
 
 func (h *Handler) StartGame(w http.ResponseWriter, r *http.Request) {
 	lobbyID := chi.URLParam(r, "id")
-	playerID := middleware.GetPlayerID(r.Context())
+	playerID := GetPlayerID(r.Context())
 
 	lobby, err := h.store.GetLobby(lobbyID)
 	if err != nil {
@@ -165,21 +164,21 @@ func (h *Handler) StartGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gamePlayers := make([]*models.Player, len(lobby.Players))
+	gamePlayers := make([]*Player, len(lobby.Players))
 	copy(gamePlayers, lobby.Players)
 
 	gameID := generateToken()[:12]
-	game := &models.Game{
+	game := &Game{
 		ID:              gameID,
 		LobbyID:         lobbyID,
 		Players:         gamePlayers,
 		TargetScore:     lobby.TargetScore,
 		AnswerTimerSecs: lobby.AnswerTimerSecs,
-		Rounds:          []*models.Round{},
-		CurrentRound: &models.Round{
+		Rounds:          []*Round{},
+		CurrentRound: &Round{
 			RoundNumber: 1,
 			AskerID:     lobby.Players[0].ID,
-			Phase:       models.PhaseAsking,
+			Phase:       PhaseAsking,
 		},
 	}
 	if err := h.store.CreateGame(game); err != nil {
@@ -194,7 +193,7 @@ func (h *Handler) StartGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("game_started", game))
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("game_started", game))
 	w.WriteHeader(http.StatusNoContent)
 }
 

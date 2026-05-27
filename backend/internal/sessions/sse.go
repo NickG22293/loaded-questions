@@ -1,4 +1,4 @@
-package handlers
+package sessions
 
 import (
 	"fmt"
@@ -32,7 +32,6 @@ func (h *Handler) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	h.store.RegisterSSEClient(lobbyID, ch)
 	defer h.store.UnregisterSSEClient(lobbyID, ch)
 
-	// Send a connected event so the client knows the stream is live.
 	fmt.Fprintf(w, "event: connected\ndata: {}\n\n")
 	flusher.Flush()
 
@@ -47,7 +46,6 @@ func (h *Handler) StreamEvents(w http.ResponseWriter, r *http.Request) {
 			w.Write(msg)
 			flusher.Flush()
 		case <-ticker.C:
-			// Keepalive comment to prevent proxy timeouts.
 			fmt.Fprintf(w, ": keepalive\n\n")
 			flusher.Flush()
 		}

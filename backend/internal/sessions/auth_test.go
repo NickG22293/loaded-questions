@@ -1,4 +1,4 @@
-package middleware
+package sessions
 
 import (
 	"context"
@@ -8,13 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"loaded-questions/store"
 )
 
 // tokenStore is a minimal Store stub that only implements GetPlayerByToken.
-// All other methods delegate to the embedded nil interface and panic if called.
 type tokenStore struct {
-	store.Store
+	Store
 	fn func(string) (string, string, error)
 }
 

@@ -50,7 +50,6 @@ export interface AnswerCountEvent {
   submittedPlayerIds: string[]
 }
 
-// SSE event shapes
 export type SSEEventName =
   | 'connected'
   | 'player_joined'

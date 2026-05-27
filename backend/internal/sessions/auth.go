@@ -1,10 +1,8 @@
-package middleware
+package sessions
 
 import (
 	"context"
 	"net/http"
-
-	"loaded-questions/store"
 )
 
 type contextKey string
@@ -18,7 +16,7 @@ const (
 // It reads the token from the X-Player-Token header first, then falls back
 // to the player_token cookie. The header is preferred so that multiple
 // browser tabs can each carry their own per-tab token via sessionStorage.
-func Auth(s store.Store) func(http.Handler) http.Handler {
+func Auth(s Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := r.Header.Get("X-Player-Token")

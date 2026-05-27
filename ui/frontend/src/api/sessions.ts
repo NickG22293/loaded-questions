@@ -1,9 +1,7 @@
-import type { Game, Lobby } from '@/types'
+import type { Game, Lobby } from '@/types/sessions'
 
-const BASE = '/api'
+const BASE = '/api/sessions'
 
-// Returns the per-tab player token for a given lobby, stored in sessionStorage
-// so each browser tab is independently authenticated even when tabs share cookies.
 function getPlayerToken(lobbyId: string): string {
   return sessionStorage.getItem(`token:${lobbyId}`) ?? ''
 }
@@ -52,7 +50,6 @@ export function startGame(lobbyId: string) {
 }
 
 // ── Game ───────────────────────────────────────────────────────────────────
-// All game actions use the lobby ID — clients only need one identifier.
 
 export function getGame(lobbyId: string) {
   return request<Game>(`/lobbies/${lobbyId}/game`)

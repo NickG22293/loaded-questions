@@ -1,4 +1,4 @@
-package handlers
+package sessions
 
 import (
 	"context"
@@ -12,8 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"loaded-questions/middleware"
-	"loaded-questions/models"
 )
 
 // ── test helpers ──────────────────────────────────────────────────────────
@@ -25,15 +23,15 @@ func withChiID(r *http.Request, id string) *http.Request {
 }
 
 func withPlayerID(r *http.Request, playerID string) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), middleware.PlayerIDKey, playerID))
+	return r.WithContext(context.WithValue(r.Context(), PlayerIDKey, playerID))
 }
 
-func twoPlayerLobby(creatorID string) *models.Lobby {
-	return &models.Lobby{
+func twoPlayerLobby(creatorID string) *Lobby {
+	return &Lobby{
 		ID:          "ABC123",
 		CreatorID:   creatorID,
 		TargetScore: 10,
-		Players: []*models.Player{
+		Players: []*Player{
 			{ID: creatorID, Name: "Alice", IsCreator: true},
 			{ID: "p2", Name: "Bob"},
 		},
@@ -44,13 +42,13 @@ func twoPlayerLobby(creatorID string) *models.Lobby {
 
 func TestCreateLobby_HappyPath(t *testing.T) {
 	s := &mockStore{
-		createLobbyFn:    func(*models.Lobby) error { return nil },
+		createLobbyFn:    func(*Lobby) error { return nil },
 		setPlayerTokenFn: func(_, _, _ string) error { return nil },
 	}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Alice","targetScore":5,"answerTimerSecs":30}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/lobbies", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies", body)
 	rr := httptest.NewRecorder()
 	h.CreateLobby(rr, req)
 
@@ -69,16 +67,15 @@ func TestCreateLobby_HappyPath(t *testing.T) {
 }
 
 func TestCreateLobby_DefaultsApplied(t *testing.T) {
-	var captured *models.Lobby
+	var captured *Lobby
 	s := &mockStore{
-		createLobbyFn:    func(l *models.Lobby) error { captured = l; return nil },
+		createLobbyFn:    func(l *Lobby) error { captured = l; return nil },
 		setPlayerTokenFn: func(_, _, _ string) error { return nil },
 	}
 	h := New(s)
 
-	// omit targetScore and answerTimerSecs — should get defaults
 	body := strings.NewReader(`{"playerName":"Alice"}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/lobbies", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies", body)
 	rr := httptest.NewRecorder()
 	h.CreateLobby(rr, req)
 
@@ -89,15 +86,15 @@ func TestCreateLobby_DefaultsApplied(t *testing.T) {
 }
 
 func TestCreateLobby_CreatorFlagSet(t *testing.T) {
-	var captured *models.Lobby
+	var captured *Lobby
 	s := &mockStore{
-		createLobbyFn:    func(l *models.Lobby) error { captured = l; return nil },
+		createLobbyFn:    func(l *Lobby) error { captured = l; return nil },
 		setPlayerTokenFn: func(_, _, _ string) error { return nil },
 	}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Alice"}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/lobbies", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies", body)
 	rr := httptest.NewRecorder()
 	h.CreateLobby(rr, req)
 
@@ -110,7 +107,7 @@ func TestCreateLobby_CreatorFlagSet(t *testing.T) {
 func TestCreateLobby_MissingName(t *testing.T) {
 	h := New(&mockStore{})
 	body := strings.NewReader(`{"playerName":""}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/lobbies", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies", body)
 	rr := httptest.NewRecorder()
 	h.CreateLobby(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -119,7 +116,7 @@ func TestCreateLobby_MissingName(t *testing.T) {
 func TestCreateLobby_BadJSON(t *testing.T) {
 	h := New(&mockStore{})
 	body := strings.NewReader(`not json`)
-	req := httptest.NewRequest(http.MethodPost, "/api/lobbies", body)
+	req := httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies", body)
 	rr := httptest.NewRecorder()
 	h.CreateLobby(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -128,20 +125,20 @@ func TestCreateLobby_BadJSON(t *testing.T) {
 // ── JoinLobby ─────────────────────────────────────────────────────────────
 
 func TestJoinLobby_HappyPath(t *testing.T) {
-	lobby := &models.Lobby{
+	lobby := &Lobby{
 		ID:      "ABC123",
-		Players: []*models.Player{{ID: "p1", Name: "Alice", IsCreator: true}},
+		Players: []*Player{{ID: "p1", Name: "Alice", IsCreator: true}},
 	}
 	s := &mockStore{
-		getLobbyFn:       func(string) (*models.Lobby, error) { return lobby, nil },
-		updateLobbyFn:    func(*models.Lobby) error { return nil },
-		setPlayerTokenFn: func(_, _, _ string) error { return nil },
+		getLobbyFn:         func(string) (*Lobby, error) { return lobby, nil },
+		updateLobbyFn:      func(*Lobby) error { return nil },
+		setPlayerTokenFn:   func(_, _, _ string) error { return nil },
 		broadcastToLobbyFn: noop,
 	}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Bob"}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/join", body), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/join", body), "ABC123")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 
@@ -157,21 +154,21 @@ func TestJoinLobby_HappyPath(t *testing.T) {
 }
 
 func TestJoinLobby_PlayerAppendedToLobby(t *testing.T) {
-	lobby := &models.Lobby{
+	lobby := &Lobby{
 		ID:      "ABC123",
-		Players: []*models.Player{{ID: "p1", Name: "Alice", IsCreator: true}},
+		Players: []*Player{{ID: "p1", Name: "Alice", IsCreator: true}},
 	}
-	var updated *models.Lobby
+	var updated *Lobby
 	s := &mockStore{
-		getLobbyFn:         func(string) (*models.Lobby, error) { return lobby, nil },
-		updateLobbyFn:      func(l *models.Lobby) error { updated = l; return nil },
+		getLobbyFn:         func(string) (*Lobby, error) { return lobby, nil },
+		updateLobbyFn:      func(l *Lobby) error { updated = l; return nil },
 		setPlayerTokenFn:   func(_, _, _ string) error { return nil },
 		broadcastToLobbyFn: noop,
 	}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Bob"}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/join", body), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/join", body), "ABC123")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 
@@ -183,12 +180,12 @@ func TestJoinLobby_PlayerAppendedToLobby(t *testing.T) {
 
 func TestJoinLobby_LobbyNotFound(t *testing.T) {
 	s := &mockStore{
-		getLobbyFn: func(string) (*models.Lobby, error) { return nil, fmt.Errorf("not found") },
+		getLobbyFn: func(string) (*Lobby, error) { return nil, fmt.Errorf("not found") },
 	}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Bob"}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/NOPE/join", body), "NOPE")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/NOPE/join", body), "NOPE")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 
@@ -196,12 +193,12 @@ func TestJoinLobby_LobbyNotFound(t *testing.T) {
 }
 
 func TestJoinLobby_GameAlreadyStarted(t *testing.T) {
-	lobby := &models.Lobby{ID: "ABC123", GameStarted: true}
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	lobby := &Lobby{ID: "ABC123", GameStarted: true}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Bob"}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/join", body), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/join", body), "ABC123")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 
@@ -209,16 +206,16 @@ func TestJoinLobby_GameAlreadyStarted(t *testing.T) {
 }
 
 func TestJoinLobby_LobbyFull(t *testing.T) {
-	players := make([]*models.Player, 10)
+	players := make([]*Player, 10)
 	for i := range players {
-		players[i] = &models.Player{ID: fmt.Sprintf("p%d", i), Name: fmt.Sprintf("Player%d", i)}
+		players[i] = &Player{ID: fmt.Sprintf("p%d", i), Name: fmt.Sprintf("Player%d", i)}
 	}
-	lobby := &models.Lobby{ID: "ABC123", Players: players}
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	lobby := &Lobby{ID: "ABC123", Players: players}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Extra"}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/join", body), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/join", body), "ABC123")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 
@@ -226,15 +223,15 @@ func TestJoinLobby_LobbyFull(t *testing.T) {
 }
 
 func TestJoinLobby_DuplicateName(t *testing.T) {
-	lobby := &models.Lobby{
+	lobby := &Lobby{
 		ID:      "ABC123",
-		Players: []*models.Player{{ID: "p1", Name: "Alice"}},
+		Players: []*Player{{ID: "p1", Name: "Alice"}},
 	}
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
 	body := strings.NewReader(`{"playerName":"Alice"}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/join", body), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/join", body), "ABC123")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 
@@ -244,7 +241,7 @@ func TestJoinLobby_DuplicateName(t *testing.T) {
 func TestJoinLobby_MissingName(t *testing.T) {
 	h := New(&mockStore{})
 	body := strings.NewReader(`{"playerName":""}`)
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/join", body), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/join", body), "ABC123")
 	rr := httptest.NewRecorder()
 	h.JoinLobby(rr, req)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -253,25 +250,25 @@ func TestJoinLobby_MissingName(t *testing.T) {
 // ── GetLobby ──────────────────────────────────────────────────────────────
 
 func TestGetLobby_Found(t *testing.T) {
-	lobby := &models.Lobby{ID: "ABC123", TargetScore: 10}
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	lobby := &Lobby{ID: "ABC123", TargetScore: 10}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodGet, "/api/lobbies/ABC123", nil), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodGet, "/api/sessions/lobbies/ABC123", nil), "ABC123")
 	rr := httptest.NewRecorder()
 	h.GetLobby(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var got models.Lobby
+	var got Lobby
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&got))
 	assert.Equal(t, "ABC123", got.ID)
 }
 
 func TestGetLobby_NotFound(t *testing.T) {
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return nil, fmt.Errorf("not found") }}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return nil, fmt.Errorf("not found") }}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodGet, "/api/lobbies/NOPE", nil), "NOPE")
+	req := withChiID(httptest.NewRequest(http.MethodGet, "/api/sessions/lobbies/NOPE", nil), "NOPE")
 	rr := httptest.NewRecorder()
 	h.GetLobby(rr, req)
 
@@ -284,16 +281,16 @@ func TestStartGame_HappyPath(t *testing.T) {
 	const creatorID = "creator1"
 	lobby := twoPlayerLobby(creatorID)
 	var broadcasted []byte
-	var createdGame *models.Game
+	var createdGame *Game
 	s := &mockStore{
-		getLobbyFn:         func(string) (*models.Lobby, error) { return lobby, nil },
-		createGameFn:       func(g *models.Game) error { createdGame = g; return nil },
-		updateLobbyFn:      func(*models.Lobby) error { return nil },
+		getLobbyFn:         func(string) (*Lobby, error) { return lobby, nil },
+		createGameFn:       func(g *Game) error { createdGame = g; return nil },
+		updateLobbyFn:      func(*Lobby) error { return nil },
 		broadcastToLobbyFn: func(_ string, event []byte) { broadcasted = event },
 	}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/start", nil), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/start", nil), "ABC123")
 	req = withPlayerID(req, creatorID)
 	rr := httptest.NewRecorder()
 	h.StartGame(rr, req)
@@ -304,17 +301,17 @@ func TestStartGame_HappyPath(t *testing.T) {
 
 	require.NotNil(t, createdGame)
 	assert.Equal(t, creatorID, createdGame.CurrentRound.AskerID)
-	assert.Equal(t, models.PhaseAsking, createdGame.CurrentRound.Phase)
+	assert.Equal(t, PhaseAsking, createdGame.CurrentRound.Phase)
 	assert.Equal(t, 1, createdGame.CurrentRound.RoundNumber)
 	assert.Contains(t, string(broadcasted), "game_started")
 }
 
 func TestStartGame_NonCreatorForbidden(t *testing.T) {
 	lobby := twoPlayerLobby("creator1")
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/start", nil), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/start", nil), "ABC123")
 	req = withPlayerID(req, "someoneelse")
 	rr := httptest.NewRecorder()
 	h.StartGame(rr, req)
@@ -325,10 +322,10 @@ func TestStartGame_NonCreatorForbidden(t *testing.T) {
 func TestStartGame_AlreadyStarted(t *testing.T) {
 	lobby := twoPlayerLobby("creator1")
 	lobby.GameStarted = true
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/start", nil), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/start", nil), "ABC123")
 	req = withPlayerID(req, "creator1")
 	rr := httptest.NewRecorder()
 	h.StartGame(rr, req)
@@ -337,15 +334,15 @@ func TestStartGame_AlreadyStarted(t *testing.T) {
 }
 
 func TestStartGame_NotEnoughPlayers(t *testing.T) {
-	lobby := &models.Lobby{
+	lobby := &Lobby{
 		ID:        "ABC123",
 		CreatorID: "creator1",
-		Players:   []*models.Player{{ID: "creator1", Name: "Alice", IsCreator: true}},
+		Players:   []*Player{{ID: "creator1", Name: "Alice", IsCreator: true}},
 	}
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return lobby, nil }}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return lobby, nil }}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/ABC123/start", nil), "ABC123")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/ABC123/start", nil), "ABC123")
 	req = withPlayerID(req, "creator1")
 	rr := httptest.NewRecorder()
 	h.StartGame(rr, req)
@@ -354,10 +351,10 @@ func TestStartGame_NotEnoughPlayers(t *testing.T) {
 }
 
 func TestStartGame_LobbyNotFound(t *testing.T) {
-	s := &mockStore{getLobbyFn: func(string) (*models.Lobby, error) { return nil, fmt.Errorf("not found") }}
+	s := &mockStore{getLobbyFn: func(string) (*Lobby, error) { return nil, fmt.Errorf("not found") }}
 	h := New(s)
 
-	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/lobbies/NOPE/start", nil), "NOPE")
+	req := withChiID(httptest.NewRequest(http.MethodPost, "/api/sessions/lobbies/NOPE/start", nil), "NOPE")
 	req = withPlayerID(req, "creator1")
 	rr := httptest.NewRecorder()
 	h.StartGame(rr, req)

@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react'
-import type { Game, Lobby, Player, Round, SSEEventName } from '@/types'
+import type { Game, Lobby, Player, Round, SSEEventName } from '@/types/sessions'
 
 interface GameState {
   lobby: Lobby | null
@@ -52,7 +52,7 @@ export function useSSE(lobbyId: string | undefined) {
   useEffect(() => {
     if (!lobbyId) return
 
-    const es = new EventSource(`/api/lobbies/${lobbyId}/events`, { withCredentials: true })
+    const es = new EventSource(`/api/sessions/lobbies/${lobbyId}/events`, { withCredentials: true })
 
     const handle = (eventName: SSEEventName) => (e: MessageEvent) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

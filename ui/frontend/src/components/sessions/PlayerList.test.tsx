@@ -1,7 +1,7 @@
 /// <reference types="vitest/globals" />
 import { render, screen } from '@testing-library/react'
 import { PlayerList } from './PlayerList'
-import type { Player } from '@/types'
+import type { Player } from '@/types/sessions'
 
 const players: Player[] = [
   { id: '1', name: 'Alice', score: 3, isCreator: true },

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
-import { PlayerList } from '@/components/PlayerList'
+import { PlayerList } from '@/components/sessions/PlayerList'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getLobby, startGame } from '@/api/client'
-import type { Lobby as LobbyType, Player } from '@/types'
+import { getLobby, startGame } from '@/api/sessions'
+import type { Lobby as LobbyType, Player } from '@/types/sessions'
 
 export function Lobby() {
   const { id } = useParams<{ id: string }>()
@@ -16,19 +16,16 @@ export function Lobby() {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
 
-  // Initial fetch
   useEffect(() => {
     if (!id) return
-    getLobby(id).then(setLobby).catch(() => navigate('/'))
+    getLobby(id).then(setLobby).catch(() => navigate('/sessions'))
     const stored = sessionStorage.getItem(`playerId:${id}`)
     if (stored) setPlayerId(stored)
   }, [id, navigate])
 
-  // SSE: handle lobby-level events directly so player_joined works
-  // before any game state exists.
   useEffect(() => {
     if (!id) return
-    const es = new EventSource(`/api/lobbies/${id}/events`, { withCredentials: true })
+    const es = new EventSource(`/api/sessions/lobbies/${id}/events`, { withCredentials: true })
 
     es.addEventListener('player_joined', (e: MessageEvent) => {
       const player = JSON.parse(e.data) as Player
@@ -38,16 +35,15 @@ export function Lobby() {
     })
 
     es.addEventListener('game_started', () => {
-      navigate(`/game/${id}`)
+      navigate(`/sessions/game/${id}`)
     })
 
     return () => es.close()
-  }, [id])
+  }, [id, navigate])
 
-  // Redirect if game already started (e.g. user refreshed lobby page mid-game).
   useEffect(() => {
     if (lobby?.gameStarted) {
-      navigate(`/game/${id}`)
+      navigate(`/sessions/game/${id}`)
     }
   }, [lobby, navigate, id])
 

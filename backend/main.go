@@ -11,40 +11,33 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"loaded-questions/handlers"
-	authmiddleware "loaded-questions/middleware"
-	"loaded-questions/store"
+	"loaded-questions/internal/auth/supabase"
+	"loaded-questions/internal/sessions"
 )
 
 func main() {
-	s := store.NewMemoryStore()
-	h := handlers.New(s)
+	jwksURL := os.Getenv("SUPABASE_JWKS_URL")
+	jwtIssuer := os.Getenv("SUPABASE_JWT_ISSUER")
+	if jwksURL == "" || jwtIssuer == "" {
+		log.Println("warn: SUPABASE_JWKS_URL or SUPABASE_JWT_ISSUER not set — starting in sessions-only mode (no JWT auth)")
+	} else {
+		authProvider, err := supabase.NewProvider(jwksURL, jwtIssuer)
+		if err != nil {
+			log.Fatalf("failed to initialise auth provider: %v", err)
+		}
+		log.Println("auth provider initialised (Supabase JWKS)")
+		_ = authProvider // used when daily routes are wired: r.Mount("/api/daily", daily.Routes(dailyHandler, authProvider))
+	}
+
+	s := sessions.NewMemoryStore()
+	h := sessions.New(s)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(corsMiddleware)
 
-	r.Route("/api", func(r chi.Router) {
-		// Public endpoints — no auth cookie required.
-		r.Post("/lobbies", h.CreateLobby)
-		r.Post("/lobbies/{id}/join", h.JoinLobby)
-		r.Get("/lobbies/{id}", h.GetLobby)
-		r.Get("/lobbies/{id}/events", h.StreamEvents)
-		r.Get("/lobbies/{id}/game", h.GetGame)
-
-		// Authenticated endpoints — all game actions use the lobby ID so
-		// clients don't need to track a separate game ID.
-		r.Group(func(r chi.Router) {
-			r.Use(authmiddleware.Auth(s))
-			r.Post("/lobbies/{id}/start", h.StartGame)
-			r.Post("/lobbies/{id}/question", h.SubmitQuestion)
-			r.Post("/lobbies/{id}/answer", h.SubmitAnswer)
-			r.Post("/lobbies/{id}/assign", h.AssignAnswer)
-			r.Post("/lobbies/{id}/lock", h.LockAssignments)
-			r.Post("/lobbies/{id}/next", h.NextRound)
-		})
-	})
+	r.Mount("/api/sessions", h.Routes())
 
 	port := os.Getenv("PORT")
 	if port == "" {

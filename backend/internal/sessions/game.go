@@ -1,4 +1,4 @@
-package handlers
+package sessions
 
 import (
 	"encoding/json"
@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/middleware"
-	"loaded-questions/models"
+	"loaded-questions/internal/httputil"
 )
 
 // GetGame returns the active game for a lobby. Used by clients to fetch
@@ -19,7 +18,7 @@ func (h *Handler) GetGame(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, game)
+	httputil.WriteJSON(w, http.StatusOK, game)
 }
 
 type submitQuestionRequest struct {
@@ -29,7 +28,7 @@ type submitQuestionRequest struct {
 // SubmitQuestion handles Phase 1 → transitions to Phase 2 (ANSWERING).
 func (h *Handler) SubmitQuestion(w http.ResponseWriter, r *http.Request) {
 	lobbyID := chi.URLParam(r, "id")
-	playerID := middleware.GetPlayerID(r.Context())
+	playerID := GetPlayerID(r.Context())
 
 	var req submitQuestionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Question == "" {
@@ -49,7 +48,7 @@ func (h *Handler) SubmitQuestion(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now()
 	game.CurrentRound.Question = req.Question
-	game.CurrentRound.Phase = models.PhaseAnswering
+	game.CurrentRound.Phase = PhaseAnswering
 	game.CurrentRound.PhaseStartedAt = &now
 
 	if err := h.store.UpdateGame(game); err != nil {
@@ -57,7 +56,7 @@ func (h *Handler) SubmitQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("phase_changed", game))
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("phase_changed", game))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -76,7 +75,7 @@ type answerCountEvent struct {
 // transitions to ASSIGNING automatically.
 func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 	lobbyID := chi.URLParam(r, "id")
-	playerID := middleware.GetPlayerID(r.Context())
+	playerID := GetPlayerID(r.Context())
 
 	var req submitAnswerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Answer == "" {
@@ -89,7 +88,7 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	if game.CurrentRound == nil || game.CurrentRound.Phase != models.PhaseAnswering {
+	if game.CurrentRound == nil || game.CurrentRound.Phase != PhaseAnswering {
 		http.Error(w, "not in answering phase", http.StatusConflict)
 		return
 	}
@@ -107,7 +106,7 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !replaced {
-		game.CurrentRound.Answers = append(game.CurrentRound.Answers, &models.Answer{
+		game.CurrentRound.Answers = append(game.CurrentRound.Answers, &Answer{
 			ID:       generateToken()[:8],
 			PlayerID: playerID,
 			Text:     req.Answer,
@@ -124,7 +123,7 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 
 	allAnswered := total > 0 && submitted >= total
 	if allAnswered {
-		game.CurrentRound.Phase = models.PhaseAssigning
+		game.CurrentRound.Phase = PhaseAssigning
 	}
 
 	if err := h.store.UpdateGame(game); err != nil {
@@ -132,13 +131,13 @@ func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("answer_count", answerCountEvent{
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("answer_count", answerCountEvent{
 		Submitted:          submitted,
 		Total:              total,
 		SubmittedPlayerIDs: submittedIDs,
 	}))
 	if allAnswered {
-		h.store.BroadcastToLobby(lobbyID, sseEvent("phase_changed", game))
+		h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("phase_changed", game))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -153,7 +152,7 @@ type assignAnswerRequest struct {
 // The Asker can reassign at any time before locking in.
 func (h *Handler) AssignAnswer(w http.ResponseWriter, r *http.Request) {
 	lobbyID := chi.URLParam(r, "id")
-	askerID := middleware.GetPlayerID(r.Context())
+	askerID := GetPlayerID(r.Context())
 
 	var req assignAnswerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.AnswerID == "" || req.PlayerID == "" {
@@ -170,13 +169,12 @@ func (h *Handler) AssignAnswer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not your turn to assign", http.StatusForbidden)
 		return
 	}
-	if game.CurrentRound.Phase != models.PhaseAssigning {
+	if game.CurrentRound.Phase != PhaseAssigning {
 		http.Error(w, "not in assigning phase", http.StatusConflict)
 		return
 	}
 
-	// Validate the answer exists.
-	var target *models.Answer
+	var target *Answer
 	for _, a := range game.CurrentRound.Answers {
 		if a.ID == req.AnswerID {
 			target = a
@@ -188,7 +186,6 @@ func (h *Handler) AssignAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the assigned player exists in the game and is not the Asker.
 	if req.PlayerID == askerID {
 		http.Error(w, "cannot assign to the asker", http.StatusBadRequest)
 		return
@@ -212,7 +209,7 @@ func (h *Handler) AssignAnswer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("assignment_updated", game.CurrentRound))
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("assignment_updated", game.CurrentRound))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -220,7 +217,7 @@ func (h *Handler) AssignAnswer(w http.ResponseWriter, r *http.Request) {
 // Scores the round and transitions to SCORING.
 func (h *Handler) LockAssignments(w http.ResponseWriter, r *http.Request) {
 	lobbyID := chi.URLParam(r, "id")
-	askerID := middleware.GetPlayerID(r.Context())
+	askerID := GetPlayerID(r.Context())
 
 	game, err := h.getGameForLobby(lobbyID)
 	if err != nil {
@@ -231,12 +228,11 @@ func (h *Handler) LockAssignments(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not your turn", http.StatusForbidden)
 		return
 	}
-	if game.CurrentRound.Phase != models.PhaseAssigning {
+	if game.CurrentRound.Phase != PhaseAssigning {
 		http.Error(w, "not in assigning phase", http.StatusConflict)
 		return
 	}
 
-	// All answers must be assigned before locking in.
 	for _, a := range game.CurrentRound.Answers {
 		if a.AssignedTo == "" {
 			http.Error(w, "all answers must be assigned before locking in", http.StatusBadRequest)
@@ -244,7 +240,6 @@ func (h *Handler) LockAssignments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Score: 1 point per correctly identified answer.
 	score := 0
 	for _, a := range game.CurrentRound.Answers {
 		if a.AssignedTo == a.PlayerID {
@@ -258,14 +253,14 @@ func (h *Handler) LockAssignments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	game.CurrentRound.Phase = models.PhaseScoring
+	game.CurrentRound.Phase = PhaseScoring
 
 	if err := h.store.UpdateGame(game); err != nil {
 		http.Error(w, "failed to update game", http.StatusInternalServerError)
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("phase_changed", game))
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("phase_changed", game))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -280,30 +275,27 @@ func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	if game.CurrentRound == nil || game.CurrentRound.Phase != models.PhaseScoring {
+	if game.CurrentRound == nil || game.CurrentRound.Phase != PhaseScoring {
 		http.Error(w, "not in scoring phase", http.StatusConflict)
 		return
 	}
 
-	// Check for a winner.
 	for _, p := range game.Players {
 		if p.Score >= game.TargetScore {
 			game.WinnerID = p.ID
-			game.CurrentRound.Phase = models.PhaseGameOver
+			game.CurrentRound.Phase = PhaseGameOver
 			if err := h.store.UpdateGame(game); err != nil {
 				http.Error(w, "failed to update game", http.StatusInternalServerError)
 				return
 			}
-			h.store.BroadcastToLobby(lobbyID, sseEvent("phase_changed", game))
+			h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("phase_changed", game))
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 	}
 
-	// Archive current round and start the next one.
 	game.Rounds = append(game.Rounds, game.CurrentRound)
 
-	// Rotate the Asker.
 	currentIdx := 0
 	for i, p := range game.Players {
 		if p.ID == game.CurrentRound.AskerID {
@@ -314,10 +306,10 @@ func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
 	nextIdx := (currentIdx + 1) % len(game.Players)
 	nextAskerID := game.Players[nextIdx].ID
 
-	game.CurrentRound = &models.Round{
+	game.CurrentRound = &Round{
 		RoundNumber: game.CurrentRound.RoundNumber + 1,
 		AskerID:     nextAskerID,
-		Phase:       models.PhaseAsking,
+		Phase:       PhaseAsking,
 	}
 
 	if err := h.store.UpdateGame(game); err != nil {
@@ -325,6 +317,6 @@ func (h *Handler) NextRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.store.BroadcastToLobby(lobbyID, sseEvent("phase_changed", game))
+	h.store.BroadcastToLobby(lobbyID, httputil.SSEEvent("phase_changed", game))
 	w.WriteHeader(http.StatusNoContent)
 }

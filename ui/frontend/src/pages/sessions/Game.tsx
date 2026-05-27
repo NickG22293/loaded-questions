@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
-import { PlayerList } from '@/components/PlayerList'
-import { Countdown } from '@/components/Countdown'
+import { PlayerList } from '@/components/sessions/PlayerList'
+import { Countdown } from '@/components/sessions/Countdown'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,8 +13,8 @@ import {
   assignAnswer,
   lockAssignments,
   nextRound,
-} from '@/api/client'
-import type { Game as GameType, Round, AnswerCountEvent } from '@/types'
+} from '@/api/sessions'
+import type { Game as GameType, Round, AnswerCountEvent } from '@/types/sessions'
 
 export function Game() {
   const { id } = useParams<{ id: string }>()
@@ -48,7 +48,7 @@ export function Game() {
 
   useEffect(() => {
     if (!id) return
-    const es = new EventSource(`/api/lobbies/${id}/events`, { withCredentials: true })
+    const es = new EventSource(`/api/sessions/lobbies/${id}/events`, { withCredentials: true })
 
     es.addEventListener('phase_changed', (e: MessageEvent) => {
       const updatedGame = JSON.parse(e.data) as GameType
@@ -184,7 +184,7 @@ export function Game() {
             </CardContent>
           </Card>
 
-          <Button variant="outline" onClick={() => navigate('/')}>
+          <Button variant="outline" onClick={() => navigate('/sessions')}>
             Back to Home
           </Button>
         </div>
@@ -475,7 +475,6 @@ export function Game() {
       )
     }
 
-    // Answerer view: watch assignments arrive in real time
     const assignedAnswers = answers.filter((a) => a.assignedTo)
     return (
       <Layout>

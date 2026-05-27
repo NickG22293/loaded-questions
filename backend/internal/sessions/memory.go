@@ -1,10 +1,8 @@
-package store
+package sessions
 
 import (
 	"fmt"
 	"sync"
-
-	"loaded-questions/models"
 )
 
 type playerToken struct {
@@ -14,29 +12,29 @@ type playerToken struct {
 
 type MemoryStore struct {
 	mu      sync.RWMutex
-	lobbies map[string]*models.Lobby
-	games   map[string]*models.Game
+	lobbies map[string]*Lobby
+	games   map[string]*Game
 	tokens  map[string]playerToken
 	clients map[string][]chan []byte
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		lobbies: make(map[string]*models.Lobby),
-		games:   make(map[string]*models.Game),
+		lobbies: make(map[string]*Lobby),
+		games:   make(map[string]*Game),
 		tokens:  make(map[string]playerToken),
 		clients: make(map[string][]chan []byte),
 	}
 }
 
-func (s *MemoryStore) CreateLobby(lobby *models.Lobby) error {
+func (s *MemoryStore) CreateLobby(lobby *Lobby) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lobbies[lobby.ID] = lobby
 	return nil
 }
 
-func (s *MemoryStore) GetLobby(id string) (*models.Lobby, error) {
+func (s *MemoryStore) GetLobby(id string) (*Lobby, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	lobby, ok := s.lobbies[id]
@@ -46,7 +44,7 @@ func (s *MemoryStore) GetLobby(id string) (*models.Lobby, error) {
 	return lobby, nil
 }
 
-func (s *MemoryStore) UpdateLobby(lobby *models.Lobby) error {
+func (s *MemoryStore) UpdateLobby(lobby *Lobby) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.lobbies[lobby.ID]; !ok {
@@ -63,14 +61,14 @@ func (s *MemoryStore) DeleteLobby(id string) error {
 	return nil
 }
 
-func (s *MemoryStore) CreateGame(game *models.Game) error {
+func (s *MemoryStore) CreateGame(game *Game) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.games[game.ID] = game
 	return nil
 }
 
-func (s *MemoryStore) GetGame(id string) (*models.Game, error) {
+func (s *MemoryStore) GetGame(id string) (*Game, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	game, ok := s.games[id]
@@ -80,7 +78,7 @@ func (s *MemoryStore) GetGame(id string) (*models.Game, error) {
 	return game, nil
 }
 
-func (s *MemoryStore) UpdateGame(game *models.Game) error {
+func (s *MemoryStore) UpdateGame(game *Game) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.games[game.ID]; !ok {

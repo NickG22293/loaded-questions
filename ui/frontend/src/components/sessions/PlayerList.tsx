@@ -1,4 +1,4 @@
-import type { Player } from '@/types'
+import type { Player } from '@/types/sessions'
 import { Badge } from '@/components/ui/badge'
 
 interface PlayerListProps {
