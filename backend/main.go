@@ -11,33 +11,49 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 	"loaded-questions/internal/auth/supabase"
+	"loaded-questions/internal/daily"
 	"loaded-questions/internal/sessions"
 )
 
 func main() {
-	jwksURL := os.Getenv("SUPABASE_JWKS_URL")
-	jwtIssuer := os.Getenv("SUPABASE_JWT_ISSUER")
-	if jwksURL == "" || jwtIssuer == "" {
-		log.Println("warn: SUPABASE_JWKS_URL or SUPABASE_JWT_ISSUER not set — starting in sessions-only mode (no JWT auth)")
-	} else {
-		authProvider, err := supabase.NewProvider(jwksURL, jwtIssuer)
-		if err != nil {
-			log.Fatalf("failed to initialise auth provider: %v", err)
-		}
-		log.Println("auth provider initialised (Supabase JWKS)")
-		_ = authProvider // used when daily routes are wired: r.Mount("/api/daily", daily.Routes(dailyHandler, authProvider))
-	}
+	_ = godotenv.Load()
 
-	s := sessions.NewMemoryStore()
-	h := sessions.New(s)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(corsMiddleware)
 
-	r.Mount("/api/sessions", h.Routes())
+	// Sessions (always on — no auth required)
+	s := sessions.NewMemoryStore()
+	r.Mount("/api/sessions", sessions.New(s).Routes())
+
+	// Daily (requires both auth env vars and a database URL)
+	jwksURL := os.Getenv("SUPABASE_JWKS_URL")
+	jwtIssuer := os.Getenv("SUPABASE_JWT_ISSUER")
+	databaseURL := os.Getenv("DATABASE_URL")
+
+	switch {
+	case databaseURL == "":
+		log.Println("warn: DATABASE_URL not set — daily routes disabled")
+	case jwksURL == "" || jwtIssuer == "":
+		log.Println("warn: SUPABASE_JWKS_URL or SUPABASE_JWT_ISSUER not set — daily routes disabled")
+	default:
+		authProvider, err := supabase.NewProvider(jwksURL, jwtIssuer)
+		if err != nil {
+			log.Fatalf("failed to initialise auth provider: %v", err)
+		}
+		dailyStore, err := daily.NewPostgresStore(ctx, databaseURL)
+		if err != nil {
+			log.Fatalf("failed to connect to database: %v", err)
+		}
+		r.Mount("/api/daily", daily.New(ctx, dailyStore, authProvider).Routes())
+		log.Println("daily routes mounted (Supabase JWKS + Postgres)")
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -63,9 +79,11 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	cancel() // stop daily timer goroutine
+
+	shutCtx, shutCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutCancel()
+	if err := srv.Shutdown(shutCtx); err != nil {
 		log.Fatalf("graceful shutdown failed: %v", err)
 	}
 	log.Println("server stopped")

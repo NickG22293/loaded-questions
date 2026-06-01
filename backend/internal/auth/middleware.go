@@ -41,15 +41,18 @@ func Optional(p Provider) func(http.Handler) http.Handler {
 	}
 }
 
-// bearerToken extracts the token from an "Authorization: Bearer <token>" header.
+// bearerToken extracts the token from an "Authorization: Bearer <token>" header,
+// falling back to the "token" query parameter for clients like EventSource that
+// cannot set custom headers.
 func bearerToken(r *http.Request) (string, bool) {
 	h := r.Header.Get("Authorization")
-	if !strings.HasPrefix(h, "Bearer ") {
-		return "", false
+	if strings.HasPrefix(h, "Bearer ") {
+		if token := strings.TrimPrefix(h, "Bearer "); token != "" {
+			return token, true
+		}
 	}
-	token := strings.TrimPrefix(h, "Bearer ")
-	if token == "" {
-		return "", false
+	if token := r.URL.Query().Get("token"); token != "" {
+		return token, true
 	}
-	return token, true
+	return "", false
 }

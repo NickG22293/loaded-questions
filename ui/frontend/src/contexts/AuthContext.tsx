@@ -18,13 +18,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+    // For implicit flow, the SDK processes the hash and stores the session during
+    // createClient() — before React mounts — so INITIAL_SESSION fires before any
+    // subscriber exists. getSession() reads the already-stored session from localStorage.
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
