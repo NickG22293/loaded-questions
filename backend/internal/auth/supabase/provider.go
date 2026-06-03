@@ -14,7 +14,7 @@ import (
 
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
-	"loaded-questions/internal/auth"
+	"candid/internal/auth"
 )
 
 // Provider verifies Supabase JWTs using the project's JWKS endpoint.

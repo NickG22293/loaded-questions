@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/internal/auth"
-	"loaded-questions/internal/httputil"
+	"candid/internal/auth"
+	"candid/internal/httputil"
 )
 
 // GetGuessTargets returns the anonymous answer pool for the guessing phase.

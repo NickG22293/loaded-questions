@@ -1,0 +1,56 @@
+name: Package & Push Helm Chart
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+    paths:
+      - "helm/**"
+      - ".github/workflows/helm-chart.yml"
+
+env:
+  REGISTRY: ghcr.io
+  CHART_REPO: ghcr.io/nickg22293/helm-charts
+
+jobs:
+  package-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "3.16.x"
+
+      - name: Resolve chart version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            echo "version=0.0.0-sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login ghcr.io \
+              --username ${{ github.actor }} \
+              --password-stdin
+
+      - name: Package chart
+        run: |
+          helm package helm/candid \
+            --version "${{ steps.version.outputs.version }}" \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --destination /tmp/helm-pkg
+
+      - name: Push chart
+        run: |
+          helm push /tmp/helm-pkg/candid-${{ steps.version.outputs.version }}.tgz \
+            oci://${{ env.CHART_REPO }}

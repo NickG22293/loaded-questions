@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"loaded-questions/internal/auth"
-	"loaded-questions/internal/httputil"
+	"candid/internal/auth"
+	"candid/internal/httputil"
 )
 
 const inviteCodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

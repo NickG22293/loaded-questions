@@ -1,6 +1,6 @@
-# Loaded Questions
+# Candid
 
-A real-time multiplayer web game based on the board game *Loaded Questions*. Built with Go (backend) and React + TypeScript (frontend).
+A real-time multiplayer web game inspired by the board game *Loaded Questions*. Built with Go (backend) and React + TypeScript (frontend).
 
 ## Dev environment
 
@@ -50,10 +50,10 @@ go test ./... -race
 
 ```bash
 # Build
-docker build -t loaded-questions-backend ./backend
+docker build -t candid-backend ./backend
 
 # Run
-docker run -p 8080:8080 loaded-questions-backend
+docker run -p 8080:8080 candid-backend
 ```
 
 ---
@@ -96,17 +96,17 @@ npm run test:watch
 
 ```bash
 # Build (serves via Nginx, proxies /api to the backend)
-docker build -t loaded-questions-frontend ./ui/frontend
+docker build -t candid-frontend ./ui/frontend
 
 # Run
-docker run -p 3000:80 loaded-questions-frontend
+docker run -p 3000:80 candid-frontend
 ```
 
 ---
 
 ## Helm chart
 
-The chart lives at `helm/loaded-questions/` and targets any nginx-ingress Kubernetes cluster.
+The chart lives at `helm/candid/` and targets any nginx-ingress Kubernetes cluster.
 
 ### Push to GHCR (OCI registry)
 
@@ -117,40 +117,40 @@ Helm 3.8+ supports OCI registries natively — no plugin needed.
 echo $GITHUB_TOKEN | helm registry login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
 
 # 2. Package the chart
-helm package helm/loaded-questions
-# Produces: loaded-questions-0.1.0.tgz
+helm package helm/candid
+# Produces: candid-0.1.0.tgz
 
 # 3. Push to GHCR
-helm push loaded-questions-0.1.0.tgz oci://ghcr.io/YOUR_GITHUB_USERNAME/helm
+helm push candid-0.1.0.tgz oci://ghcr.io/YOUR_GITHUB_USERNAME/helm
 ```
 
-The chart is now available at `oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/loaded-questions`.
+The chart is now available at `oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/candid`.
 
 > **GHCR visibility** — new packages default to private. Go to your GitHub profile →
-> **Packages** → `helm/loaded-questions` → **Package settings** → make it public if
+> **Packages** → `helm/candid` → **Package settings** → make it public if
 > you want others to pull it without authenticating.
 
 ### Install from GHCR
 
 ```bash
-helm install loaded-questions \
-  oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/loaded-questions \
+helm install candid \
+  oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/candid \
   --version 0.1.0 \
   --set ingress.host=questions.yourdomain.com \
-  --set backend.image.repository=ghcr.io/YOUR_GITHUB_USERNAME/loaded-questions-backend \
+  --set backend.image.repository=ghcr.io/YOUR_GITHUB_USERNAME/candid-backend \
   --set backend.image.tag=latest \
-  --set frontend.image.repository=ghcr.io/YOUR_GITHUB_USERNAME/loaded-questions-frontend \
+  --set frontend.image.repository=ghcr.io/YOUR_GITHUB_USERNAME/candid-frontend \
   --set frontend.image.tag=latest
 ```
 
 ### Upgrade
 
-Bump `version` in `helm/loaded-questions/Chart.yaml`, then:
+Bump `version` in `helm/candid/Chart.yaml`, then:
 
 ```bash
-helm package helm/loaded-questions
-helm push loaded-questions-<NEW_VERSION>.tgz oci://ghcr.io/YOUR_GITHUB_USERNAME/helm
-helm upgrade loaded-questions oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/loaded-questions --version <NEW_VERSION>
+helm package helm/candid
+helm push candid-<NEW_VERSION>.tgz oci://ghcr.io/YOUR_GITHUB_USERNAME/helm
+helm upgrade candid oci://ghcr.io/YOUR_GITHUB_USERNAME/helm/candid --version <NEW_VERSION>
 ```
 
 ---

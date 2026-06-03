@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "loaded-questions.fullname" . }}-backend
+  name: {{ include "candid.fullname" . }}-backend
   labels:
-    {{- include "loaded-questions.labels" . | nindent 4 }}
+    {{- include "candid.labels" . | nindent 4 }}
     app.kubernetes.io/component: backend
 spec:
   replicas: {{ .Values.backend.replicaCount }}
   selector:
     matchLabels:
-      {{- include "loaded-questions.selectorLabels" . | nindent 6 }}
+      {{- include "candid.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: backend
   template:
     metadata:
       labels:
-        {{- include "loaded-questions.selectorLabels" . | nindent 8 }}
+        {{- include "candid.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
       {{- with .Values.imagePullSecrets }}

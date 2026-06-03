@@ -6,8 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"loaded-questions/internal/auth"
-	"loaded-questions/internal/httputil"
+	"candid/internal/auth"
+	"candid/internal/httputil"
 )
 
 // GetChat returns all chat messages for today's question thread in this group.

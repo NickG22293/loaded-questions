@@ -6,8 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"loaded-questions/internal/auth"
-	"loaded-questions/internal/httputil"
+	"candid/internal/auth"
+	"candid/internal/httputil"
 )
 
 func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {

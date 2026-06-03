@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext'
+import icon from '@/assets/icon_transparent.png'
 
 export function Login() {
   const { signInWithGoogle } = useAuth()
@@ -6,8 +7,9 @@ export function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm space-y-6 p-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Loaded Questions</h1>
+        <div className="flex flex-col items-center space-y-4">
+          <img src={icon} alt="Candid logo" className="h-28 w-auto" />
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">Candid</h1>
           <p className="text-muted-foreground">Sign in to play the daily game</p>
         </div>
 

@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "loaded-questions.fullname" . }}-frontend
+  name: {{ include "candid.fullname" . }}-frontend
   labels:
-    {{- include "loaded-questions.labels" . | nindent 4 }}
+    {{- include "candid.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
   selector:
     matchLabels:
-      {{- include "loaded-questions.selectorLabels" . | nindent 6 }}
+      {{- include "candid.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: frontend
   template:
     metadata:
       labels:
-        {{- include "loaded-questions.selectorLabels" . | nindent 8 }}
+        {{- include "candid.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: frontend
       annotations:
         # Force pod rollout when the nginx config changes.
@@ -53,4 +53,4 @@ spec:
       volumes:
         - name: nginx-config
           configMap:
-            name: {{ include "loaded-questions.fullname" . }}-nginx
+            name: {{ include "candid.fullname" . }}-nginx

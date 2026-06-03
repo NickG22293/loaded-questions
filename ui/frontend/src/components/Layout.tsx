@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
+import icon from '@/assets/icon_transparent.png'
 
 interface LayoutProps {
   children: ReactNode
@@ -10,7 +11,10 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <span className="font-bold text-lg">Loaded Questions</span>
+          <div className="flex items-center gap-2">
+            <img src={icon} alt="" className="h-8 w-auto" />
+            <span className="font-bold text-lg text-foreground">Candid</span>
+          </div>
           <nav className="flex gap-1">
             <NavLink
               to="/daily"

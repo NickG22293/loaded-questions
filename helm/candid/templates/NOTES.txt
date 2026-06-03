@@ -13,6 +13,6 @@ Build & push images before your first install:
   docker push {{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}
 
 To upgrade after code changes:
-  helm upgrade loaded-questions ./helm/loaded-questions -f your-values.yaml
+  helm upgrade candid ./helm/candid -f your-values.yaml
 
 ⚠  The backend uses an in-memory store. All active games are lost on pod restart.

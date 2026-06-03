@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "loaded-questions.fullname" . }}-backend
+  name: {{ include "candid.fullname" . }}-backend
   labels:
-    {{- include "loaded-questions.labels" . | nindent 4 }}
+    {{- include "candid.labels" . | nindent 4 }}
     app.kubernetes.io/component: backend
 spec:
   type: ClusterIP
@@ -13,5 +13,5 @@ spec:
       targetPort: http
       protocol: TCP
   selector:
-    {{- include "loaded-questions.selectorLabels" . | nindent 4 }}
+    {{- include "candid.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: backend

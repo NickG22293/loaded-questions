@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "loaded-questions.fullname" . }}-nginx
+  name: {{ include "candid.fullname" . }}-nginx
   labels:
-    {{- include "loaded-questions.labels" . | nindent 4 }}
+    {{- include "candid.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
 data:
   # Replaces the nginx.conf baked into the image.

@@ -1,5 +1,5 @@
 
-We are building a web app that mimics the gameplay of the board game Loaded Questions. 
+We are building **Candid**, a web app that mimics the gameplay of the board game Loaded Questions. 
 
 # Gameplay
 

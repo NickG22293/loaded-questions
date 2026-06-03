@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/internal/httputil"
+	"candid/internal/httputil"
 )
 
 // StreamEvents opens an SSE connection for a group and streams events until

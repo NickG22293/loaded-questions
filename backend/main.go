@@ -12,9 +12,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
-	"loaded-questions/internal/auth/supabase"
-	"loaded-questions/internal/daily"
-	"loaded-questions/internal/sessions"
+	"candid/internal/auth/supabase"
+	"candid/internal/daily"
+	"candid/internal/sessions"
 )
 
 func main() {

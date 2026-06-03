@@ -1,7 +1,7 @@
 {{/*
 Fully qualified app name. Avoids double-naming when release == chart name.
 */}}
-{{- define "loaded-questions.fullname" -}}
+{{- define "candid.fullname" -}}
 {{- if eq .Release.Name .Chart.Name -}}
 {{- .Chart.Name | trunc 63 | trimSuffix "-" }}
 {{- else -}}
@@ -12,7 +12,7 @@ Fully qualified app name. Avoids double-naming when release == chart name.
 {{/*
 Common labels — applied to every resource.
 */}}
-{{- define "loaded-questions.labels" -}}
+{{- define "candid.labels" -}}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
@@ -27,7 +27,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels — used by Deployments and Services to match pods.
 Must be stable (never include chart version).
 */}}
-{{- define "loaded-questions.selectorLabels" -}}
+{{- define "candid.selectorLabels" -}}
 app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

@@ -1,4 +1,4 @@
-module loaded-questions
+module candid
 
 go 1.25.0
 

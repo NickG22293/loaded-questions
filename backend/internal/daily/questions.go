@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"loaded-questions/internal/auth"
-	"loaded-questions/internal/httputil"
+	"candid/internal/auth"
+	"candid/internal/httputil"
 )
 
 // GetToday returns today's question and the user's answer if already submitted.

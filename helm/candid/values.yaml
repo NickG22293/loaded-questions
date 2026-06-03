@@ -1,8 +1,8 @@
 backend:
   image:
-    repository: loaded-questions/backend
-    tag: latest
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/nickg22293/candid-backend
+    tag: main
+    pullPolicy: Always
   replicaCount: 1
   service:
     port: 8080
@@ -17,9 +17,9 @@ backend:
 
 frontend:
   image:
-    repository: loaded-questions/frontend
-    tag: latest
-    pullPolicy: IfNotPresent
+    repository: ghcr.io/nickg22293/candid-frontend
+    tag: main
+    pullPolicy: Always
   replicaCount: 1
   service:
     port: 80
@@ -32,7 +32,7 @@ ingress:
   tls:
     enabled: false
     # If enabled, reference an existing TLS Secret (e.g. managed by cert-manager).
-    secretName: loaded-questions-tls
+    secretName: candid-tls
 
 # Optional: pull images from a private registry
 # imagePullSecrets:

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/internal/httputil"
+	"candid/internal/httputil"
 )
 
 // GetGame returns the active game for a lobby. Used by clients to fetch

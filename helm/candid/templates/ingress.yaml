@@ -1,9 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "loaded-questions.fullname" . }}
+  name: {{ include "candid.fullname" . }}
   labels:
-    {{- include "loaded-questions.labels" . | nindent 4 }}
+    {{- include "candid.labels" . | nindent 4 }}
   annotations:
     # Disable response buffering so SSE events are streamed to clients
     # immediately rather than held until nginx's buffer fills.
@@ -30,13 +30,13 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "loaded-questions.fullname" . }}-backend
+                name: {{ include "candid.fullname" . }}-backend
                 port:
                   name: http
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ include "loaded-questions.fullname" . }}-frontend
+                name: {{ include "candid.fullname" . }}-frontend
                 port:
                   name: http

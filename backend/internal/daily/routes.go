@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/internal/auth"
+	"candid/internal/auth"
 )
 
 // Routes mounts all daily routes under auth.Required + ensureUser.

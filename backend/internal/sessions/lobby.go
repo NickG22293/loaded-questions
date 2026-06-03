@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"loaded-questions/internal/httputil"
+	"candid/internal/httputil"
 )
 
 type createLobbyRequest struct {
